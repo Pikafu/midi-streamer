@@ -33,74 +33,9 @@ void usage( void ) {
   exit( 0 );
 }
 
-void echo( double deltatime, std::vector< unsigned char > *message, void */*userData*/ )
-{
-  unsigned int nBytes = message->size();
-  for ( unsigned int i=0; i<nBytes; i++ )
-    //std::cout << "Byte " << i << " = " << (int)message->at(i) << ", ";
-    std::cout << (int)message->at(i) << ", ";
-  if ( nBytes > 0 )
-    std::cout << "stamp = " << deltatime << std::endl;
-  //midiout->sendMessage( &message );
-}
-
-// This function should be embedded in a try/catch block in case of
-// an exception.  It offers the user a choice of MIDI ports to open.
-// It returns false if there are no ports available.
-bool chooseMidiPort( RtMidiIn *rtmidi, RtMidiOut *rtmidiout );
-
-int main( int argc, char ** /*argv[]*/ )
-{
-  RtMidiIn *midiin = 0;
-  RtMidiOut *midiout = 0;
-  std::vector<unsigned char> input;
-  std::vector<unsigned char> output;
-  
-  int nBytes, i;
-  double stamp; 
-
-  // Minimal command-line check.
-  if ( argc > 2 ) usage();
-
-  try {
-
-    // RtMidiIn and RtMidiOut constructors
-    midiin = new RtMidiIn();
-    midiout = new RtMidiOut();
-
-    // Call function to select port.
-    if ( chooseMidiPort( midiin, midiout ) == false ) goto cleanup;
-
-    // Don't ignore sysex, timing, or active sensing messages.
-    // midiin->ignoreTypes( false, false, false );
-    
-    // Install an interrupt handler function.
-    done = false;
-    (void) signal(SIGINT, finish);
-    
-    // Periodically check input queue.
-    std::cout << "\nReading MIDI from port ... quit with Ctrl-C.\n";
-    while ( !done ) {
-      stamp = midiin->getMessage( &input );
-      nBytes = input.size();
-      for ( i=0; i<nBytes; i++ )
-        std::cout << (int)input[i] << ", ";
-      if ( nBytes > 0 )
-        std::cout << "stamp = " << stamp << std::endl;
-      output = input;
-      SLEEP( 100 );
-      midiout->sendMessage( &output );
-    }
-  } catch ( RtMidiError &error ) {
-    error.printMessage();
-  }
-
-  cleanup:
-    std::cout << "\nCleaning Up.\n";
-    delete midiin;
-    return 0;
-}
-
+/**
+  Prompts user to select input and output midi ports
+*/
 bool chooseMidiPort( RtMidiIn *rtmidiin, RtMidiOut *rtmidiout )
 {
   std::cout << "\nWould you like to open a virtual input port? [y/N] ";
@@ -167,3 +102,68 @@ bool chooseMidiPort( RtMidiIn *rtmidiin, RtMidiOut *rtmidiout )
 
   return true;
 }
+
+/**
+  Receives midi from midiin and transmits it out of midiout.
+ */
+void echo( RtMidiIn *midiin, RtMidiOut *midiout )
+{
+  int nBytes, i;
+  std::vector<unsigned char> input, output;
+  double stamp;
+  stamp = midiin->getMessage( &input );
+  nBytes = input.size();
+  for ( i=0; i<nBytes; i++ )
+    std::cout << (int)input[i] << ", ";
+  if ( nBytes > 0 )
+    std::cout << "stamp = " << stamp << std::endl;
+  output = input;
+  SLEEP( 100 );
+  midiout->sendMessage( &output );
+}
+
+int main( int argc, char ** /*argv[]*/ )
+{
+  RtMidiIn *midiin = 0;
+  RtMidiOut *midiout = 0;
+
+  // Minimal command-line check.
+  if ( argc > 2 ) usage();
+
+  try {
+
+    // This function should be embedded in a try/catch block in case of
+    // an exception.  It offers the user a choice of MIDI ports to open.
+    // It returns false if there are no ports available.
+    bool chooseMidiPort( RtMidiIn *rtmidi, RtMidiOut *rtmidiout );
+
+    // RtMidiIn and RtMidiOut constructors
+    midiin = new RtMidiIn();
+    midiout = new RtMidiOut();
+
+    // Call function to select port.
+    if ( chooseMidiPort( midiin, midiout ) == false ) goto cleanup;
+
+    // Don't ignore sysex, timing, or active sensing messages.
+    // midiin->ignoreTypes( false, false, false );
+    
+    // Install an interrupt handler function.
+    done = false;
+    (void) signal(SIGINT, finish);
+    
+    // Periodically check input queue.
+    std::cout << "\nReading MIDI from port ... quit with Ctrl-C.\n";
+    while ( !done ) {
+      echo( midiin, midiout );
+    }
+  } catch ( RtMidiError &error ) {
+    error.printMessage();
+  }
+
+  cleanup:
+    std::cout << "\nCleaning Up.\n";
+    delete midiin;
+    return 0;
+}
+
+
