@@ -1,9 +1,13 @@
 //*****************************************//
-//  cmidiin.cpp
-//  by Gary Scavone, 2003-2004.
+//  midiclient.cpp
+//  by John Fu, 2015.
 //
-//  Simple program to test MIDI input and
-//  use of a user callback function.
+//  Simple program to echo MIDI input to 
+//  MIDI output.
+//
+//  compile with: 
+//  g++ -g -std=c++11 -Wall -D__LINUX_ALSA__ -o 
+//  midiclient midiclient.cpp rtmidi/RtMidi.cpp -lasound -lpthread
 //
 //*****************************************//
 
