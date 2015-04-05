@@ -7,7 +7,7 @@
 //
 //  compile with: 
 //  g++ -g -std=c++11 -Wall -D__LINUX_ALSA__ -o 
-//  midiclient midiclient.cpp rtmidi/RtMidi.cpp -lasound -lpthread
+//  midiclient midiclient.cpp rtmidi/RtMidi.cpp -lasound -pthread
 //
 //*****************************************//
 
