@@ -1,6 +1,6 @@
 #include <iostream>
 #include <thread>
-//using namespace std;
+using namespace std;
 
 static const int NUM_THREADS = 10;
 
