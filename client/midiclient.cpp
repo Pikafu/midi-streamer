@@ -11,11 +11,23 @@
 //
 //*****************************************//
 
+/* Standard */
 #include <iostream>
 #include <cstdlib>
+
+/* Threading */
 #include <signal.h>
 #include <thread>
+
+/* MIDI */
 #include "RtMidi.h"
+
+/* Networking */
+#include "simple_client.h"
+
+/* DEFS */
+#define PORT "3490" // the port client will be connecting to
+#define MAXDATASIZE 100 // max number of bytes we can get at once
 
 // Platform-dependent sleep routines.
 #if defined(__WINDOWS_MM__)
@@ -36,7 +48,7 @@ static const int NUM_THREADS = 10;
 void usage( void ) {
 	// Error function in case of incorrect command-line
 	// argument specifications.
-	std::cout << "\nuseage: cmidiin <port>\n";
+	std::cout << "\n message: cmidiin <port>\n";
 	std::cout << "    where port = the device to use (default = 0).\n\n";
 	exit( 0 );
 }
@@ -47,42 +59,32 @@ void usage( void ) {
 bool chooseMidiPort( RtMidiIn *rtmidiin, RtMidiOut *rtmidiout )
 {
 	std::cout << "\nWould you like to open a virtual input port? [y/N] ";
-
 	std::string keyHit;
 	std::getline( std::cin, keyHit );
 	if ( keyHit == "y" ) {
 		rtmidiin->openVirtualPort();
 		return true;
 	}
-
 	std::cout << "\nDetecting available ports...\n";
-
 	std::string inPortName;
 	std::string outPortName;
 	unsigned int i = 0, nInPorts = rtmidiin->getPortCount();
 	unsigned int j = 0, nOutPorts = rtmidiout->getPortCount();
-
 	if ( nInPorts == 0 ) {
 		std::cout << "Input port is not available!" << std::endl;
 		return false;
 	}
-
 	if ( nOutPorts == 0 ) {
 		std::cout << "Output port is not available!" << std::endl;
 	}
-
 	if ( nInPorts == 1 ) {
 		std::cout << "Opening as input port: " << rtmidiin->getPortName() << std::endl;
 	}
-
 	if ( nOutPorts == 1 ) {
 		std::cout << "Opening as output port: " << rtmidiout->getPortName() << std::endl;
 	}
-
 	else {
-
 		std::cout << "\nChoose from available ports:\n";
-
 		for ( i=0; i<nInPorts; i++ ) {
 			inPortName = rtmidiin->getPortName(i);
 			std::cout << "  Input port #" << i << ": " << inPortName << '\n';
@@ -91,28 +93,23 @@ bool chooseMidiPort( RtMidiIn *rtmidiin, RtMidiOut *rtmidiout )
 			outPortName = rtmidiout->getPortName(j);
 			std::cout << "  Output port #" << j << ": " << outPortName << '\n';
 		}
-
 		do {
 			std::cout << "\nChoose number for input port: ";
 			std::cin >> i;
 		} while ( i >= nInPorts );
-
 		do {
 			std::cout << "Choose number for output port: ";
 			std::cin >> j;
 		} while ( j >= nOutPorts );
-
 		std::getline( std::cin, keyHit );  // used to clear out stdin
 	}
-
 	rtmidiin->openPort( i );
 	rtmidiout->openPort( j );
-
 	return true;
 }
 
 /**
-  Receives midi from midiin and transmits it out of midiout.
+  Receives MIDI from midiin and transmits it out of midiout.
   Shift is the number of semitones you want the output to be.
  */
 void echo( RtMidiIn *midiin, RtMidiOut *midiout, int shift )
@@ -143,10 +140,15 @@ void call_from_thread(int tid) {
 	std::cout << "Launched by thread " << tid << std::endl;
 }
 
-int main( int argc, char ** /*argv[]*/ )
+int main( int argc, char *argv[] )
 {
+	// MIDI ports
 	RtMidiIn *midiin = 0;
 	RtMidiOut *midiout = 0;
+
+	// Store data received from the server
+	int server_sockfd = 0;
+	char buf = '\0';
 
 	// Minimal command-line check.
 	if ( argc > 2 ) usage();
@@ -162,7 +164,7 @@ int main( int argc, char ** /*argv[]*/ )
 		midiout = new RtMidiOut();
 
 		// Call function to select port.
-		if ( chooseMidiPort( midiin, midiout ) == false ) goto cleanup;
+		if ( chooseMidiPort( midiin, midiout ) == false ) goto clean_up;
 
 		// Don't ignore sysex, timing, or active sensing messages.
 		//midiin->ignoreTypes( false, false, false );
@@ -181,19 +183,26 @@ int main( int argc, char ** /*argv[]*/ )
 		//    	std::thread(call_from_thread, i);
 		//    }
 
+		// Connect to the server
+		int server_sockfd = connect_to_server(argc, argv);
+
 		// Echo input to output
 		while ( !done ) {
 			echo( midiin, midiout, 4);
+			buf = recv_from_server(server_sockfd);
+			std::cout << buf << std::endl;
 		}
 
 	} catch ( RtMidiError &error ) {
 		error.printMessage();
 	}
 
-	cleanup:
-	std::cout << "\nCleaning Up.\n";
-	delete midiin;
-	return 0;
+	clean_up:
+		std::cout << "\nCleaning Up.\n";
+		cleanup(server_sockfd);
+		delete midiin;
+		delete midiout;
+		return 0;
 }
 
 

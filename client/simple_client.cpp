@@ -28,11 +28,11 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-
 #include <arpa/inet.h>
+#include <vector>
+#include "simple_client.h"
 
 #define PORT "3490" // the port client will be connecting to 
-
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 // Get sockaddr, IPv4 or IPv6:
@@ -44,11 +44,11 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(int argc, char *argv[])
+/* Connect to the server. If successful, return the socket file descriptor. */
+int connect_to_server(int argc, char *argv[])
 {
-    int sockfd, numbytes;                   // sockfd - stores socket descriptor, 
-                                            // numbytes - stores # bytes read into the buffer from recv()
-    char buf[MAXDATASIZE];                  // Store messages from the server
+    int sockfd;                   			// sockfd - stores socket descriptor
+
     struct addrinfo hints, *servinfo, *p;   // hints - an addrinfo struct from netdb that we can fill in
                                             // servinfo - linked list of struct addrinfos, set by getaddrinfo()
                                             // p - used in loop, stores the address info of the first server we connect to
@@ -98,15 +98,21 @@ int main(int argc, char *argv[])
     printf("client: connecting to %s\n", s);
     
     freeaddrinfo(servinfo); // free the linkedlist
-    
+    return sockfd;
+}
+
+char recv_from_server(int sockfd) {
+    int numbytes;                    	// numbytes - stores # bytes read into the buffer from recv()
+    std::vector<char> buf(MAXDATASIZE);
     // Error with recv()
-    if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+    if ((numbytes = recv(sockfd, buf.data(), buf.size() - 1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
-    
-    buf[numbytes] = '\0'; // pad message with 0 (Why?)
-    printf("client: received '%s'\n",buf);
-    close(sockfd);
-    return 0;
+    // buf[numbytes] = '\0'; // pad message with 0 (Why?)
+    return *buf.data();
+}
+
+void cleanup(int sockfd) {
+	close(sockfd);
 }
