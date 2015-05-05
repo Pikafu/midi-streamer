@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <vector>
+#include <string>
 #include "simple_client.h"
 
 #define PORT "3490" // the port client will be connecting to 
@@ -101,18 +102,29 @@ int connect_to_server(int argc, char *argv[])
     return sockfd;
 }
 
-char recv_from_server(int sockfd) {
+/* Returns the pointer to a char received from the server */
+std::string recv_from_server(int sockfd) {
     int numbytes;                    	// numbytes - stores # bytes read into the buffer from recv()
     std::vector<char> buf(MAXDATASIZE);
+    std::string rcv;
     // Error with recv()
-    if ((numbytes = recv(sockfd, buf.data(), buf.size() - 1, 0)) == -1) {
+    numbytes = recv(sockfd, buf.data(), buf.size() - 1, 0);
+//    printf("Numbytes: %i\n", numbytes);
+    if (numbytes == -1) {
         perror("recv");
         exit(1);
     }
-    // buf[numbytes] = '\0'; // pad message with 0 (Why?)
-    return *buf.data();
+    rcv.append( buf.cbegin(), buf.cend() );
+    return rcv;
+}
+
+/* Sends char to server */
+void send_to_server(std::string data, int sockfd) {
+	if (send(sockfd, data.c_str(), data.length(), 0) == -1)
+		perror("send");
 }
 
 void cleanup(int sockfd) {
+	printf("Cleaning up\n");
 	close(sockfd);
 }

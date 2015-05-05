@@ -1,9 +1,6 @@
-/*
-** server.c -- a stream socket server demo
-*/
-
+#include <iostream>
+#include <cstdlib>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -14,9 +11,11 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <vector>
+#include <string>
 
 #define PORT "3490"  // the port users will be connecting to
-
+#define MAXDATASIZE 100 // max number of bytes we can get at once
 #define BACKLOG 10     // how many pending connections queue will hold
 
 void sigchld_handler(int s)
@@ -113,13 +112,30 @@ int main(void)
             s, sizeof s);
         printf("server: got connection from %s\n", s);
 
-        if (!fork()) { // this is the child process
-            close(sockfd); // child doesn't need the listener
-            if (send(new_fd, "Hello, world!", 13, 0) == -1)
-                perror("send");
-            close(new_fd);
-            exit(0);
+        // Send confirmation to client when client sends something over
+        // (encapsulate in function recv_from_client())
+        int numbytes;
+        std::vector<char> buf(MAXDATASIZE);
+        numbytes = recv(new_fd, buf.data(), buf.size() - 1, 0);
+        if (numbytes == -1) {
+        	perror("recv");
+        } else if (!numbytes) {
+        	continue;
+        } else {
+        	std::string teststr = "Got it!";
+        	std::cout << "received from client: " << buf.data() << std::endl;
+        	if (send(new_fd, teststr.c_str(), teststr.length(), 0) == -1)
+        		perror("send");
         }
+
+//        // Sends "Hello world!" every time a connection is made
+//        if (!fork()) { // this is the child process
+//            close(sockfd); // child doesn't need the listener
+//            if (send(new_fd, "Hello, world!", 13, 0) == -1)
+//                perror("send");
+//            close(new_fd);
+//            exit(0);
+//        }
         close(new_fd);  // parent doesn't need this
     }
 

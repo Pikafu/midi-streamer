@@ -14,6 +14,8 @@
 /* Standard */
 #include <iostream>
 #include <cstdlib>
+#include <vector>
+#include <string>
 
 /* Threading */
 #include <signal.h>
@@ -148,7 +150,7 @@ int main( int argc, char *argv[] )
 
 	// Store data received from the server
 	int server_sockfd = 0;
-	char buf = '\0';
+	std::string rcvdata;
 
 	// Minimal command-line check.
 	if ( argc > 2 ) usage();
@@ -184,13 +186,20 @@ int main( int argc, char *argv[] )
 		//    }
 
 		// Connect to the server
-		int server_sockfd = connect_to_server(argc, argv);
+		server_sockfd = connect_to_server(argc, argv);
 
 		// Echo input to output
 		while ( !done ) {
-			echo( midiin, midiout, 4);
-			buf = recv_from_server(server_sockfd);
-			std::cout << buf << std::endl;
+//			echo( midiin, midiout, 4);
+			std::cout << "Got into loop" << std::endl;
+			std::string teststr = "shit";
+			send_to_server(teststr, server_sockfd);
+			rcvdata = recv_from_server(server_sockfd);
+			if (!rcvdata.empty()) {
+				std::cout << "client: received " << rcvdata << std::endl;
+			}
+//			buf = recv_from_server(server_sockfd);
+//			std::cout << buf << std::endl;
 		}
 
 	} catch ( RtMidiError &error ) {
