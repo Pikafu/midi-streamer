@@ -1,4 +1,4 @@
-IMidi
+midi-streamer
 ===========
 
-IM for lovers of Midi. C++ version of duo-list.
+Multicast MIDI streaming over WAN in C++.
